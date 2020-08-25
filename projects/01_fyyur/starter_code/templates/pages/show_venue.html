@@ -29,6 +29,10 @@
 		<p>
 			<i class="fab fa-facebook-f"></i> {% if venue.facebook_link %}<a href="{{ venue.facebook_link }}" target="_blank">{{ venue.facebook_link }}</a>{% else %}No Facebook Link{% endif %}
 		</p>
+        <p>
+    	    <i class="fas fa-trash"></i>
+            <input type="button" id="delete-btn" value="Delete" class="btn btn-danger btn-md">
+        </p>
 		{% if venue.seeking_talent %}
 		<div class="seeking">
 			<p class="lead">Currently seeking talent</p>
@@ -74,6 +78,14 @@
 		{% endfor %}
 	</div>
 </section>
-
+<script>
+    document.querySelector("#delete-btn").addEventListener("click", () => {
+        fetch("/venues/{{ venue.id }}", {
+            method: "DELETE",
+        }).then(() => {
+            window.location.href = "/"
+        })
+    });
+</script>
 {% endblock %}
 

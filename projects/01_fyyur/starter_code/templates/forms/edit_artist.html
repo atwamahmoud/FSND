@@ -5,14 +5,10 @@
     <form class="form" method="post" action="/artists/{{artist.id}}/edit">
       <h3 class="form-heading">Edit artist <em>{{ artist.name }}</em></h3>
       <div class="form-group">
-        <label for="name">Name</label>
-        {{ form.name(class_ = 'form-control', autofocus = true) }}
-      </div>
-      <div class="form-group">
           <label>City & State</label>
           <div class="form-inline">
             <div class="form-group">
-              {{ form.city(class_ = 'form-control', placeholder='City', autofocus = true) }}
+              {{ form.city(class_ = 'form-control', placeholder='City', value=artist.city ,autofocus = true) }}
             </div>
             <div class="form-group">
               {{ form.state(class_ = 'form-control', placeholder='State', autofocus = true) }}
@@ -21,18 +17,50 @@
       </div>
       <div class="form-group">
           <label for="phone">Phone</label>
-          {{ form.phone(class_ = 'form-control', placeholder='xxx-xxx-xxxx', autofocus = true) }}
+          {{ form.phone(class_ = 'form-control', placeholder='xxx-xxx-xxxx', value=artist.phone, autofocus = true) }}
         </div>
       <div class="form-group">
         <label for="genres">Genres</label>
         <small>Ctrl+Click to select multiple</small>
-        {{ form.genres(class_ = 'form-control', placeholder='Genres, separated by commas', id=form.state, autofocus = true) }}
+        {{ form.genres(class_ = 'form-control', placeholder='Genres, separated by commas', autofocus = true) }}
+      </div>
+      <div class="form-group">
+        <label for="seeking_venue">Seeking Venue</label>
+        {{ form.seeking_venue(class_ = 'form-control', placeholder='Yes or No' ,autofocus = true) }}
+      </div>
+      <div class="form-group">
+        <label for="seeking_description">Seeking Description</label>
+        {{ form.seeking_description(class_ = 'form-control', value=artist.seeking_description, placeholder='Yes or No' ,autofocus = true) }}
       </div>
       <div class="form-group">
           <label for="genres">Facebook Link</label>
-          {{ form.facebook_link(class_ = 'form-control', placeholder='http://', id=form.state, autofocus = true) }}
-        </div>
+          {{ form.facebook_link(class_ = 'form-control', value=artist.facebook_link, placeholder='http://', autofocus = true) }}
+      </div>
+      <div class="form-group">
+          <label for="image_link">Image Link</label>
+          {{ form.image_link(class_ = 'form-control',value=artist.image_link, placeholder='http://', autofocus = true) }}
+      </div>
+      <div class="form-group">
+          <label for="website">Website</label>
+          {{ form.website(class_ = 'form-control', value=artist.website , placeholder='http://', autofocus = true) }}
+      </div>
+        {{ form.hidden_tag() }}
       <input type="submit" value="Edit Artist" class="btn btn-primary btn-lg btn-block">
     </form>
+    <script>
+        const selected = {{ venue.genres|safe }}
+        const selected_state = "{{ venue.state|safe }}"
+        const options = document.querySelectorAll("#genres option");
+        const options_state = document.querySelectorAll("#state option");
+        [].slice.call(options).forEach(option => {
+            option.selected = selected.indexOf(option.innerText.trim()) > -1
+        });
+        [].slice.call(options_state).forEach(option => {
+            if(selected_state === option.value) {
+                option.setAttribute("selected", true)
+            }
+        });
+        document.querySelector('option[value="{{ "YES" if venue.seeking_talent else "NO" }}"]').selected = true;
+    </script>
   </div>
 {% endblock %}

@@ -1,20 +1,73 @@
 from datetime import datetime
 from flask_wtf import Form
-from wtforms import StringField, SelectField, SelectMultipleField, DateTimeField
-from wtforms.validators import DataRequired, AnyOf, URL
+from wtforms import StringField, SelectField, SelectMultipleField, DateTimeField, TextAreaField
+from wtforms.validators import DataRequired, AnyOf, URL, ValidationError
+from common import merged, GENRES, STATES, phone_dict
+
 
 class ShowForm(Form):
     artist_id = StringField(
-        'artist_id'
+        'artist_id', validators=[DataRequired()]
     )
     venue_id = StringField(
-        'venue_id'
+        'venue_id', validators=[DataRequired()]
     )
     start_time = DateTimeField(
         'start_time',
         validators=[DataRequired()],
-        default= datetime.today()
+        default=datetime.today()
     )
+
+
+s = [s.value for s in STATES]
+
+
+def stateValidator(form, field):
+    if field.data not in s:
+        raise ValidationError("Invalid State")
+
+
+g = set([genre.name for genre in GENRES])
+
+
+def genreValidator(form, field):
+    if not set(field.data).issubset(g):
+        raise ValidationError("Invalid Genre")
+
+
+genres = SelectMultipleField(
+    'genres', validators=[DataRequired(), genreValidator],
+    choices=merged
+)
+
+
+def phoneValidator(form, field):
+    # xxx-xxx-xxxx
+    # Phone number in USA: (area code 3 digits) (exchange 3 digits ) (number 4 digits)
+    # According to: https://www.quora.com/What-is-the-American-mobile-phone-number-format
+    possible = phone_dict[form.data.get("state")]
+
+    if len(field.data) != 12 or int(field.data[0:3]) not in possible or field.data[3] != "-" or field.data[7] != "-":
+        raise ValidationError("Invalid Phone Number, Must be exactly 12 characters")
+
+
+state = SelectField(
+    'state', validators=[DataRequired(), stateValidator],
+    choices=[(s.value, s.value) for s in STATES]
+)
+
+
+def seekingValidator(form, field):
+    if field.data not in ['YES', 'NO']:
+        raise ValidationError("Invalid choice for Seeking talent")
+
+
+def seekingDescriptionValidator(form, field):
+    isSeeking_1 = form.data.get("seeking_venue")
+    isSeeking_2 = form.data.get("seeking_talent")
+
+    if (isSeeking_1 == "YES" or isSeeking_2 == "YES") and len(field.data) == 0:
+        raise ValidationError("Cannot leave Seeking Description empty if seeking venue is true")
 
 class VenueForm(Form):
     name = StringField(
@@ -23,99 +76,37 @@ class VenueForm(Form):
     city = StringField(
         'city', validators=[DataRequired()]
     )
-    state = SelectField(
-        'state', validators=[DataRequired()],
-        choices=[
-            ('AL', 'AL'),
-            ('AK', 'AK'),
-            ('AZ', 'AZ'),
-            ('AR', 'AR'),
-            ('CA', 'CA'),
-            ('CO', 'CO'),
-            ('CT', 'CT'),
-            ('DE', 'DE'),
-            ('DC', 'DC'),
-            ('FL', 'FL'),
-            ('GA', 'GA'),
-            ('HI', 'HI'),
-            ('ID', 'ID'),
-            ('IL', 'IL'),
-            ('IN', 'IN'),
-            ('IA', 'IA'),
-            ('KS', 'KS'),
-            ('KY', 'KY'),
-            ('LA', 'LA'),
-            ('ME', 'ME'),
-            ('MT', 'MT'),
-            ('NE', 'NE'),
-            ('NV', 'NV'),
-            ('NH', 'NH'),
-            ('NJ', 'NJ'),
-            ('NM', 'NM'),
-            ('NY', 'NY'),
-            ('NC', 'NC'),
-            ('ND', 'ND'),
-            ('OH', 'OH'),
-            ('OK', 'OK'),
-            ('OR', 'OR'),
-            ('MD', 'MD'),
-            ('MA', 'MA'),
-            ('MI', 'MI'),
-            ('MN', 'MN'),
-            ('MS', 'MS'),
-            ('MO', 'MO'),
-            ('PA', 'PA'),
-            ('RI', 'RI'),
-            ('SC', 'SC'),
-            ('SD', 'SD'),
-            ('TN', 'TN'),
-            ('TX', 'TX'),
-            ('UT', 'UT'),
-            ('VT', 'VT'),
-            ('VA', 'VA'),
-            ('WA', 'WA'),
-            ('WV', 'WV'),
-            ('WI', 'WI'),
-            ('WY', 'WY'),
-        ]
-    )
+    state = state
     address = StringField(
         'address', validators=[DataRequired()]
     )
     phone = StringField(
-        'phone'
+        'phone', validators=[DataRequired(), phoneValidator]
     )
     image_link = StringField(
         'image_link'
     )
-    genres = SelectMultipleField(
-        # TODO implement enum restriction
-        'genres', validators=[DataRequired()],
+
+    genres = genres
+    facebook_link = StringField(
+        'facebook_link', validators=[DataRequired(), URL()]
+    )
+    website = StringField(
+        'website', validators=[DataRequired(), URL()]
+    )
+    seeking_talent = SelectField(
+        'seeking_talent', validators=[DataRequired(), seekingValidator],
         choices=[
-            ('Alternative', 'Alternative'),
-            ('Blues', 'Blues'),
-            ('Classical', 'Classical'),
-            ('Country', 'Country'),
-            ('Electronic', 'Electronic'),
-            ('Folk', 'Folk'),
-            ('Funk', 'Funk'),
-            ('Hip-Hop', 'Hip-Hop'),
-            ('Heavy Metal', 'Heavy Metal'),
-            ('Instrumental', 'Instrumental'),
-            ('Jazz', 'Jazz'),
-            ('Musical Theatre', 'Musical Theatre'),
-            ('Pop', 'Pop'),
-            ('Punk', 'Punk'),
-            ('R&B', 'R&B'),
-            ('Reggae', 'Reggae'),
-            ('Rock n Roll', 'Rock n Roll'),
-            ('Soul', 'Soul'),
-            ('Other', 'Other'),
+            ('YES', 'YES'),
+            ('NO', 'NO')
         ]
     )
-    facebook_link = StringField(
-        'facebook_link', validators=[URL()]
+
+    seeking_description = TextAreaField(
+        'seeking_description', validators=[seekingDescriptionValidator]
     )
+
+
 
 class ArtistForm(Form):
     name = StringField(
@@ -124,97 +115,89 @@ class ArtistForm(Form):
     city = StringField(
         'city', validators=[DataRequired()]
     )
-    state = SelectField(
-        'state', validators=[DataRequired()],
-        choices=[
-            ('AL', 'AL'),
-            ('AK', 'AK'),
-            ('AZ', 'AZ'),
-            ('AR', 'AR'),
-            ('CA', 'CA'),
-            ('CO', 'CO'),
-            ('CT', 'CT'),
-            ('DE', 'DE'),
-            ('DC', 'DC'),
-            ('FL', 'FL'),
-            ('GA', 'GA'),
-            ('HI', 'HI'),
-            ('ID', 'ID'),
-            ('IL', 'IL'),
-            ('IN', 'IN'),
-            ('IA', 'IA'),
-            ('KS', 'KS'),
-            ('KY', 'KY'),
-            ('LA', 'LA'),
-            ('ME', 'ME'),
-            ('MT', 'MT'),
-            ('NE', 'NE'),
-            ('NV', 'NV'),
-            ('NH', 'NH'),
-            ('NJ', 'NJ'),
-            ('NM', 'NM'),
-            ('NY', 'NY'),
-            ('NC', 'NC'),
-            ('ND', 'ND'),
-            ('OH', 'OH'),
-            ('OK', 'OK'),
-            ('OR', 'OR'),
-            ('MD', 'MD'),
-            ('MA', 'MA'),
-            ('MI', 'MI'),
-            ('MN', 'MN'),
-            ('MS', 'MS'),
-            ('MO', 'MO'),
-            ('PA', 'PA'),
-            ('RI', 'RI'),
-            ('SC', 'SC'),
-            ('SD', 'SD'),
-            ('TN', 'TN'),
-            ('TX', 'TX'),
-            ('UT', 'UT'),
-            ('VT', 'VT'),
-            ('VA', 'VA'),
-            ('WA', 'WA'),
-            ('WV', 'WV'),
-            ('WI', 'WI'),
-            ('WY', 'WY'),
-        ]
-    )
+    state = state
     phone = StringField(
-        # TODO implement validation logic for state
-        'phone'
+        'phone', validators=[DataRequired(), phoneValidator]
     )
     image_link = StringField(
         'image_link'
     )
-    genres = SelectMultipleField(
-        # TODO implement enum restriction
-        'genres', validators=[DataRequired()],
+
+    genres = genres
+    facebook_link = StringField(
+        'facebook_link', validators=[DataRequired(), URL()]
+    )
+    website = StringField(
+        'website', validators=[DataRequired(), URL()]
+    )
+    seeking_venue = SelectField(
+        'seeking_venue', validators=[DataRequired(), seekingValidator],
         choices=[
-            ('Alternative', 'Alternative'),
-            ('Blues', 'Blues'),
-            ('Classical', 'Classical'),
-            ('Country', 'Country'),
-            ('Electronic', 'Electronic'),
-            ('Folk', 'Folk'),
-            ('Funk', 'Funk'),
-            ('Hip-Hop', 'Hip-Hop'),
-            ('Heavy Metal', 'Heavy Metal'),
-            ('Instrumental', 'Instrumental'),
-            ('Jazz', 'Jazz'),
-            ('Musical Theatre', 'Musical Theatre'),
-            ('Pop', 'Pop'),
-            ('Punk', 'Punk'),
-            ('R&B', 'R&B'),
-            ('Reggae', 'Reggae'),
-            ('Rock n Roll', 'Rock n Roll'),
-            ('Soul', 'Soul'),
-            ('Other', 'Other'),
+            ('YES', 'YES'),
+            ('NO', 'NO')
         ]
     )
-    facebook_link = StringField(
-        # TODO implement enum restriction
-        'facebook_link', validators=[URL()]
+    seeking_description = TextAreaField(
+        'seeking_description', validators=[seekingDescriptionValidator]
     )
 
-# TODO IMPLEMENT NEW ARTIST FORM AND NEW SHOW FORM
+
+class EditArtistForm(Form):
+    city = StringField(
+        'city', validators=[DataRequired()]
+    )
+    state = state
+    phone = StringField(
+        'phone', validators=[DataRequired(), phoneValidator]
+    )
+    image_link = StringField(
+        'image_link'
+    )
+
+    genres = genres
+    facebook_link = StringField(
+        'facebook_link', validators=[DataRequired(), URL()]
+    )
+    website = StringField(
+        'website', validators=[DataRequired(), URL()]
+    )
+    seeking_venue = SelectField(
+        'seeking_venue', validators=[DataRequired(), seekingValidator],
+        choices=[
+            ('YES', 'YES'),
+            ('NO', 'NO')
+        ]
+    )
+    seeking_description = TextAreaField(
+        'seeking_description', validators=[seekingDescriptionValidator]
+    )
+
+class EditVenueForm(Form):
+    city = StringField(
+        'city', validators=[DataRequired()]
+    )
+    state = state
+    phone = StringField(
+        'phone', validators=[DataRequired(), phoneValidator]
+    )
+    image_link = StringField(
+        'image_link'
+    )
+
+    genres = genres
+    facebook_link = StringField(
+        'facebook_link', validators=[DataRequired(), URL()]
+    )
+    website = StringField(
+        'website', validators=[DataRequired(), URL()]
+    )
+    seeking_talent = SelectField(
+        'seeking_venue', validators=[DataRequired(), seekingValidator],
+        choices=[
+            ('YES', 'YES'),
+            ('NO', 'NO')
+        ]
+    )
+    seeking_description = TextAreaField(
+        'seeking_description', validators=[seekingDescriptionValidator]
+    )
